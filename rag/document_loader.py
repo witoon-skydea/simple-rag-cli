@@ -3,7 +3,7 @@ Document loader module for RAG system
 """
 import os
 from typing import List
-from langchain_community.document_loaders import TextLoader, PyPDFLoader
+from langchain_community.document_loaders import TextLoader, PyPDFLoader, Docx2txtLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 def load_document(file_path: str) -> List:
@@ -21,6 +21,8 @@ def load_document(file_path: str) -> List:
     # Load document based on file extension
     if file_extension.lower() == '.pdf':
         loader = PyPDFLoader(file_path)
+    elif file_extension.lower() == '.docx':
+        loader = Docx2txtLoader(file_path)
     elif file_extension.lower() in ['.txt', '.md', '.csv']:
         loader = TextLoader(file_path)
     else:

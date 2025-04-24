@@ -54,22 +54,32 @@ def answer_question(args):
     
     vector_store = get_vector_store(db_path)
     
-    # Get LLM
-    llm = get_llm_model()
-    
     # Get relevant documents
     print("Searching for relevant documents...")
-    documents = similarity_search(vector_store, args.question, k=4)
+    documents = similarity_search(vector_store, args.question, k=args.num_chunks)
     
-    # Generate response
-    print("Generating response...\n")
-    response = generate_response(llm, documents, args.question)
-    
-    # Print response
-    print("-" * 80)
-    print("Answer:")
-    print(response.strip())
-    print("-" * 80)
+    if args.raw_chunks:
+        # Print raw chunks without LLM processing
+        print("-" * 80)
+        print(f"Top {len(documents)} relevant chunks:")
+        for i, doc in enumerate(documents):
+            print(f"\nChunk {i+1}:")
+            print("-" * 40)
+            print(doc.page_content)
+        print("-" * 80)
+    else:
+        # Get LLM
+        llm = get_llm_model()
+        
+        # Generate response
+        print("Generating response...\n")
+        response = generate_response(llm, documents, args.question)
+        
+        # Print response
+        print("-" * 80)
+        print("Answer:")
+        print(response.strip())
+        print("-" * 80)
 
 def main():
     """
@@ -87,6 +97,8 @@ def main():
     query_parser = subparsers.add_parser("query", help="Query the documents")
     query_parser.add_argument("question", help="Question to answer")
     query_parser.add_argument("--db-dir", default=DEFAULT_DB_DIR, help="Directory to store the vector database")
+    query_parser.add_argument("--raw-chunks", action="store_true", help="Return raw chunks without LLM processing")
+    query_parser.add_argument("--num-chunks", type=int, default=4, help="Number of chunks to return (default: 4)")
     
     args = parser.parse_args()
     

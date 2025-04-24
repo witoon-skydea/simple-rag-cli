@@ -6,3 +6,4 @@ langchain-core>=0.1.30
 python-dotenv>=1.0.1
 pypdf>=4.0.2
 pydantic>=2.6.3
+python-docx>=0.8.11
