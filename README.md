@@ -1,11 +1,17 @@
+
 # Simple RAG CLI
 
 โปรแกรม CLI อย่างง่ายสำหรับ Retrieval Augmented Generation (RAG) ที่ช่วยให้คุณสามารถนำเข้าเอกสารและถามคำถามเกี่ยวกับเนื้อหาได้
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/witoonpongsilathong/placeholder-images/main/rag-diagram.png" alt="RAG diagram" width="600"/>
+</p>
 
 ## คุณสมบัติ
 
 - **อินเทอร์เฟซ CLI อย่างง่าย**: ใช้งานง่ายผ่านคำสั่งบรรทัดคำสั่งสำหรับนำเข้าเอกสารและถามคำถาม
 - **การโหลดเอกสาร**: รองรับไฟล์ TXT, PDF, MD, CSV และ DOCX
+- **การนำเข้าโฟลเดอร์**: สามารถนำเข้าไฟล์ทั้งหมดที่อยู่ในโฟลเดอร์ได้ในคำสั่งเดียว รวมถึงการค้นหาไฟล์แบบ recursive ในโฟลเดอร์ย่อย
 - **การสร้าง Embedding**: ใช้โมเดล `mxbai-embed-large:latest` ของ Ollama สำหรับสร้าง embeddings
 - **LLM**: ใช้โมเดล `llama3:8b` ของ Ollama สำหรับสร้างคำตอบ
 - **การจัดเก็บเวกเตอร์**: ใช้ ChromaDB สำหรับจัดเก็บและค้นหาเวกเตอร์อย่างมีประสิทธิภาพ
@@ -22,15 +28,18 @@
 ## การติดตั้ง
 
 1. โคลนโปรเจคนี้
-2. หากเคยติดตั้งมาก่อนและต้องการเริ่มใหม่ ให้ลบ virtual environment เดิม:
-
+```bash
+git clone https://github.com/yourusername/simple-rag-cli.git
+cd simple-rag-cli
 ```
+
+2. หากเคยติดตั้งมาก่อนและต้องการเริ่มใหม่ ให้ลบ virtual environment เดิม:
+```bash
 rm -rf venv
 ```
 
 3. รันสคริปต์ติดตั้ง:
-
-```
+```bash
 ./setup.sh
 ```
 
@@ -41,8 +50,7 @@ rm -rf venv
 - ตรวจสอบการติดตั้ง Ollama
 
 4. ตรวจสอบว่า Ollama กำลังทำงานพร้อมโมเดลที่ต้องการ:
-
-```
+```bash
 ollama serve  # รันในเทอร์มินัลอื่น
 ```
 
@@ -66,45 +74,60 @@ ollama serve  # รันในเทอร์มินัลอื่น
 
 ### การเปิดใช้งาน Virtual Environment
 
-```
+```bash
 source venv/bin/activate
 ```
 
 ### การนำเข้าเอกสาร
 
-```
+โปรแกรมสนับสนุนการนำเข้าเอกสารได้หลายวิธี:
+
+```bash
+# นำเข้าไฟล์แต่ละไฟล์
 ./run.sh ingest path/to/file1.pdf path/to/file2.txt
+
+# นำเข้าไฟล์ทั้งหมดในโฟลเดอร์
+./run.sh ingest path/to/documents_folder
+
+# นำเข้าทั้งไฟล์และโฟลเดอร์พร้อมกัน
+./run.sh ingest path/to/file1.pdf path/to/documents_folder
+
+# นำเข้าโฟลเดอร์โดยไม่มองหาไฟล์ในโฟลเดอร์ย่อย
+./run.sh ingest path/to/documents_folder --no-recursive
+
+# ระบุตำแหน่งฐานข้อมูลเวกเตอร์
+./run.sh ingest path/to/documents_folder --db-dir custom_db_location
 ```
 
-คุณสามารถนำเข้าไฟล์หลายไฟล์พร้อมกันได้
+**หมายเหตุเกี่ยวกับการนำเข้าโฟลเดอร์**:
+- ค่าเริ่มต้น (หรือใช้ `--recursive`) จะค้นหาไฟล์ในทุกโฟลเดอร์ย่อยด้วย
+- ใช้ `--no-recursive` เพื่อค้นหาเฉพาะในโฟลเดอร์หลักเท่านั้น
+- โปรแกรมจะอ่านเฉพาะไฟล์ที่สนับสนุน (.txt, .pdf, .md, .csv, .docx) เท่านั้น
 
 ### การถามคำถาม
 
-ค้นหาและตอบคำถามโดยใช้ LLM:
-```
+```bash
+# ค้นหาและตอบคำถามโดยใช้ LLM
 ./run.sh query "คำถามของคุณเกี่ยวกับเอกสาร"
-```
 
-ค้นหาและแสดงเฉพาะส่วนที่เกี่ยวข้องโดยไม่ใช้ LLM:
-```
+# ค้นหาและแสดงเฉพาะส่วนที่เกี่ยวข้องโดยไม่ใช้ LLM
 ./run.sh query "คำถามของคุณเกี่ยวกับเอกสาร" --raw-chunks
-```
 
-ระบุจำนวนส่วนที่ต้องการค้นหา:
-```
+# ระบุจำนวนส่วนที่ต้องการค้นหา
 ./run.sh query "คำถามของคุณเกี่ยวกับเอกสาร" --num-chunks 6
-```
 
-ค้นหาส่วนที่เกี่ยวข้องจำนวนมากโดยไม่ใช้ LLM:
-```
-./run.sh query "คำถามของคุณเกี่ยวกับเอกสาร" --raw-chunks --num-chunks 8
+# ระบุตำแหน่งฐานข้อมูลเวกเตอร์ที่ต้องการค้นหา
+./run.sh query "คำถามของคุณเกี่ยวกับเอกสาร" --db-dir custom_db_location
 ```
 
 ## ตัวอย่าง
 
-```
-# นำเข้าเอกสารตัวอย่าง
+```bash
+# นำเข้าเอกสารตัวอย่าง (ไฟล์เดียว)
 ./run.sh ingest data/sample.txt
+
+# นำเข้าโฟลเดอร์ data ทั้งหมด
+./run.sh ingest data
 
 # ถามคำถาม
 ./run.sh query "RAG คืออะไร และมีประโยชน์อย่างไร"
@@ -136,18 +159,18 @@ source venv/bin/activate
 หากพบปัญหา dependency conflicts ระหว่างแพ็คเกจ LangChain:
 
 1. ลองลบ venv และสร้างใหม่:
-```
+```bash
 rm -rf venv
 ./setup.sh
 ```
 
 2. หากยังมีปัญหา ลองแก้ไขไฟล์ requirements.txt โดยตรง:
-```
+```bash
 nano requirements.txt
 ```
 
 3. ทดลองติดตั้งแต่ละแพ็คเกจแยกกัน:
-```
+```bash
 pip install chromadb
 pip install langchain-ollama
 ```
@@ -155,17 +178,38 @@ pip install langchain-ollama
 ### ปัญหาเกี่ยวกับ Ollama
 
 1. ตรวจสอบว่า Ollama กำลังทำงาน:
-```
+```bash
 curl http://localhost:11434/api/version
 ```
 
 2. ตรวจสอบโมเดลที่มีอยู่:
-```
+```bash
 ollama list
 ```
 
 3. ดาวน์โหลดโมเดลที่จำเป็น:
-```
+```bash
 ollama pull mxbai-embed-large:latest
 ollama pull llama3:8b
 ```
+
+## การอัพเดทล่าสุด
+
+- **เวอร์ชัน 1.1.0** - เพิ่มความสามารถในการนำเข้าเอกสารทั้งโฟลเดอร์
+  - สนับสนุนการค้นหาไฟล์แบบ recursive ในโฟลเดอร์ย่อย
+  - เพิ่มตัวเลือก `--no-recursive` สำหรับการค้นหาในโฟลเดอร์หลักเท่านั้น
+  - แสดงความคืบหน้าและสรุปการนำเข้าอย่างละเอียด
+
+## การมีส่วนร่วม
+
+หากคุณต้องการมีส่วนร่วมในโปรเจคนี้:
+
+1. Fork โปรเจค
+2. สร้าง branch ของคุณ (`git checkout -b feature/amazing-feature`)
+3. Commit การเปลี่ยนแปลงของคุณ (`git commit -m 'Add amazing feature'`)
+4. Push ไปยัง branch (`git push origin feature/amazing-feature`)
+5. เปิด Pull Request
+
+## ลิขสิทธิ์
+
+โปรเจคนี้เผยแพร่ภายใต้สัญญาอนุญาต MIT - ดูไฟล์ [LICENSE](LICENSE) สำหรับรายละเอียด

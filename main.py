@@ -5,7 +5,7 @@ Simple RAG CLI for document Q&A
 import os
 import argparse
 import sys
-from rag.document_loader import load_document
+from rag.document_loader import load_document, scan_directory, is_supported_file
 from rag.vector_store import get_vector_store, add_documents, similarity_search
 from rag.llm import get_llm_model, generate_response
 
@@ -23,19 +23,45 @@ def ingest_documents(args):
     db_path = os.path.join(os.getcwd(), args.db_dir)
     vector_store = get_vector_store(db_path)
     
+    # Prepare list of files to ingest
+    files_to_ingest = []
+    
+    # Process each input path (file or directory)
+    for path in args.paths:
+        if os.path.isdir(path):
+            # If it's a directory, scan for supported files
+            print(f"Scanning directory: {path}...")
+            try:
+                dir_files = scan_directory(path, recursive=args.recursive)
+                print(f"  Found {len(dir_files)} supported files")
+                files_to_ingest.extend(dir_files)
+            except Exception as e:
+                print(f"Error scanning directory {path}: {e}")
+        elif os.path.isfile(path):
+            # If it's a file, check if it's supported
+            if is_supported_file(path):
+                files_to_ingest.append(path)
+            else:
+                print(f"Skipping unsupported file: {path}")
+        else:
+            print(f"Path not found: {path}")
+    
     # Load and add documents
-    for file_path in args.files:
-        print(f"Loading {file_path}...")
+    total_files = len(files_to_ingest)
+    successful_files = 0
+    
+    for i, file_path in enumerate(files_to_ingest, 1):
+        print(f"[{i}/{total_files}] Loading {file_path}...")
         try:
             documents = load_document(file_path)
-            print(f"  Loaded {len(documents)} chunks")
-            
             add_documents(vector_store, documents)
-            print(f"  Added to vector store")
+            print(f"  Loaded and added {len(documents)} chunks")
+            successful_files += 1
         except Exception as e:
-            print(f"Error processing {file_path}: {e}")
+            print(f"  Error processing {file_path}: {e}")
     
-    print(f"Documents ingested successfully to {db_path}")
+    print(f"\nIngestion complete: {successful_files}/{total_files} files processed successfully")
+    print(f"Vector store location: {db_path}")
 
 def answer_question(args):
     """
@@ -90,8 +116,12 @@ def main():
     
     # Ingest command
     ingest_parser = subparsers.add_parser("ingest", help="Ingest documents")
-    ingest_parser.add_argument("files", nargs="+", help="Files to ingest")
+    ingest_parser.add_argument("paths", nargs="+", help="Files or directories to ingest")
     ingest_parser.add_argument("--db-dir", default=DEFAULT_DB_DIR, help="Directory to store the vector database")
+    ingest_parser.add_argument("--recursive", action="store_true", default=True, 
+                              help="Recursively scan directories for files (default: True)")
+    ingest_parser.add_argument("--no-recursive", action="store_false", dest="recursive",
+                              help="Do not recursively scan directories")
     
     # Query command
     query_parser = subparsers.add_parser("query", help="Query the documents")
